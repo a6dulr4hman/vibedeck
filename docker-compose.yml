@@ -1,0 +1,44 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      MONGO_URL: ${MONGO_URL}
+      DB_NAME: ${DB_NAME:-vibedeck_db}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      CLERK_PUBLISHABLE_KEY: ${CLERK_PUBLISHABLE_KEY}
+      CLERK_AUTHORIZED_PARTIES: ${CLERK_AUTHORIZED_PARTIES}
+      K2_API_KEY: ${K2_API_KEY}
+      K2_BASE_URL: ${K2_BASE_URL:-https://api.k2think.ai/v1}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY}
+      NVIDIA_BASE_URL: ${NVIDIA_BASE_URL:-https://integrate.api.nvidia.com/v1}
+      EMERGENT_LLM_KEY: ${EMERGENT_LLM_KEY}
+      ALLOW_TEST_AUTH: ${ALLOW_TEST_AUTH:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+    ports:
+      - "8001:8001"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL}
+        REACT_APP_CLERK_PUBLISHABLE_KEY: ${REACT_APP_CLERK_PUBLISHABLE_KEY}
+        REACT_APP_DEMO_AUTH: ${REACT_APP_DEMO_AUTH:-false}
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  # ---- Optional: run MongoDB here instead of Coolify ----
+  # mongo:
+  #   image: mongo:7
+  #   restart: unless-stopped
+  #   volumes:
+  #     - vibedeck_mongo:/data/db
+  #   ports:
+  #     - "27017:27017"
+
+# volumes:
+#   vibedeck_mongo:

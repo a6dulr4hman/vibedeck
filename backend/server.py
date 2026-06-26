@@ -177,6 +177,8 @@ async def generate_from_pdf(
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Please upload a PDF file")
     content = await file.read()
+    if len(content) > 12 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="PDF too large (max 12MB)")
     text = extract_pdf_text(content)
     if len(text) < 40:
         raise HTTPException(status_code=400, detail="Could not extract readable text from this PDF")

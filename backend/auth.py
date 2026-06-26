@@ -51,7 +51,7 @@ async def get_current_user(request: Request) -> dict:
         raise HTTPException(status_code=401, detail=f"Token verification failed: {exc}")
 
     if not getattr(state, "is_signed_in", False):
-        raise HTTPException(status_code=401, detail=getattr(state, "reason", "Unauthorized") or "Unauthorized")
+        raise HTTPException(status_code=401, detail=str(getattr(state, "reason", "") or "Unauthorized"))
 
     payload = state.payload or {}
     if "sub" not in payload:
