@@ -1,0 +1,153 @@
+{
+  "project_name": "VibeDeck",
+  "theme": "dark",
+  "archetype": "Archetype 5 (Luxury) infused with Cosmic/Magic UI accents",
+  "design_philosophy": "A 'Godly' dark mode presentation generator that operates as an autonomous art director. It leans on deep cinematic backgrounds with extreme high-fidelity glowing gradients (Aceternity style), vast negative space, and extreme softness (heavy radii, blur). It must feel premium, magical, and intelligent, avoiding purely clinical or purely cyberpunk aesthetics.",
+  "typography": {
+    "fonts": {
+      "headings": "Outfit",
+      "body": "Manrope",
+      "mono": "JetBrains Mono"
+    },
+    "hierarchy": {
+      "h1_hero": "text-4xl sm:text-5xl lg:text-6xl font-light tracking-tighter",
+      "h2_section": "text-2xl sm:text-3xl lg:text-4xl font-normal tracking-tight",
+      "h3_card": "text-xl sm:text-2xl font-medium tracking-tight",
+      "body": "text-base leading-relaxed text-zinc-300",
+      "small_labels": "text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500"
+    }
+  },
+  "colors": {
+    "background": {
+      "primary": "#050508",
+      "secondary": "#0A0A0E",
+      "surface": "rgba(255, 255, 255, 0.03)"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A1A1AA",
+      "muted": "#52525B"
+    },
+    "accents": {
+      "aurora_primary": "#8B5CF6",
+      "aurora_secondary": "#3B82F6",
+      "aurora_tertiary": "#EC4899",
+      "gradient_vibe": "bg-gradient-to-br from-violet-600 via-fuchsia-600 to-cyan-500",
+      "border_subtle": "border-white/10",
+      "border_glow": "border-violet-500/50"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    }
+  },
+  "spacing_and_layout": {
+    "container_padding": "p-8 md:p-12 lg:p-16",
+    "grid_gap": "gap-6 lg:gap-8",
+    "bento_grid": "grid grid-cols-1 md:grid-cols-8 lg:grid-cols-12 auto-rows-[minmax(180px,auto)]",
+    "radii": {
+      "cards": "rounded-2xl",
+      "buttons": "rounded-xl",
+      "modals": "rounded-3xl",
+      "canvas": "rounded-2xl"
+    },
+    "canvas_aspect_ratio": "aspect-video w-full max-w-6xl mx-auto shadow-[0_0_80px_rgba(139,92,246,0.15)]"
+  },
+  "motion_and_effects": {
+    "glassmorphism": "backdrop-blur-2xl bg-white/5 border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)]",
+    "hover_states": "transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:-translate-y-1",
+    "aceternity_effects": [
+      "Aurora Backgrounds: Soft animated mesh gradients floating behind main containers.",
+      "Spotlight: Mouse-tracking radial gradient glow on Bento grid cards.",
+      "Meteors: Falling light streaks in the hero/auth background.",
+      "Sparkles: Emitted during 'Generation Progress' states.",
+      "Number Tickers: For metrics/analytics inside generated presentations."
+    ],
+    "transitions": {
+      "page": "opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+      "slide": "framer-motion layout transition with staggerChildren"
+    }
+  },
+  "components_strategy": {
+    "buttons": {
+      "primary": "bg-white text-black font-medium rounded-xl px-6 py-3 hover:scale-105 transition-transform",
+      "magic": "relative group overflow-hidden rounded-xl p-[1px] bg-gradient-to-r from-violet-600 to-cyan-500. Inner child is bg-black/90 px-6 py-3 rounded-xl backdrop-blur-xl group-hover:bg-transparent transition-all",
+      "secondary": "bg-white/5 border border-white/10 text-white rounded-xl px-6 py-3 hover:bg-white/10 transition-colors"
+    },
+    "inputs": "bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-violet-500/50 focus:border-transparent transition-all placeholder:text-zinc-500",
+    "llm_selector": "Glassmorphic pill-shaped radio group or dropdown. Each LLM (K2 Think v2, Gemini, Claude, DeepSeek, Nemotron) features a unique subtle accent dot color.",
+    "thumbnails": "aspect-video bg-zinc-900 rounded-xl border border-white/10 overflow-hidden relative group"
+  },
+  "pages": {
+    "Auth": {
+      "layout": "Split screen or centered floating card. Native Clerk forms (no redirect).",
+      "visuals": "Meteors effect in the background, aurora glow behind the auth card. Deep dark #050508 background.",
+      "card": "Extremely soft rounded-3xl, heavy glassmorphism, floating in space."
+    },
+    "Dashboard": {
+      "layout": "Top nav with Avatar/Settings. Main content is a Bento Grid.",
+      "hero_actions": "Two primary large bento blocks: 'Upload PDF & Generate' (Magic styling) and 'Start from Scratch' (Secondary styling).",
+      "settings_panel": "Floating glass panel for LLM selection (K2 Think v2 default).",
+      "presentation_list": "Bento grid of thumbnails for saved presentations. Hover applies spotlight effect."
+    },
+    "Presentation_Viewer": {
+      "layout": "Focused, cinematic viewer. Dark theater mode.",
+      "canvas": "Strictly 16:9 (aspect-video), scales responsively. Centered. Heavy rounded-2xl corners with a subtle outer glow.",
+      "content_density": "Punchy, high-impact bullet points, metrics, and short phrases only. No textbook walls of text.",
+      "controls": "Floating glass pill at bottom center containing Play/Pause, Next/Prev, and slide counter.",
+      "navigator": "Horizontal scrolling thumbnail strip below the main canvas or absolute positioned on the left side."
+    },
+    "Generation_Pipeline": {
+      "layout": "Overlay or centered modal during generation.",
+      "visuals": "Animated glowing progress bar, Sparkles effect, typography ticking through pipeline steps (e.g., 'Reading PDF...', 'Choreographing Slides...', 'Applying Art Direction...')."
+    }
+  },
+  "media": {
+    "aurora_backgrounds": [
+      {
+        "url": "https://images.unsplash.com/photo-1771448233590-b75e74912c3a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxODl8MHwxfHNlYXJjaHwzfHxhYnN0cmFjdCUyMGRhcmslMjBhdXJvcmF8ZW58MHx8fHwxNzgyNTExODkyfDA&ixlib=rb-4.1.0&q=85",
+        "category": "Hero Background / Auth Background"
+      },
+      {
+        "url": "https://images.pexels.com/photos/33191351/pexels-photo-33191351.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+        "category": "Magic Generation State Background"
+      }
+    ],
+    "presentation_thumbnails": [
+      {
+        "url": "https://images.unsplash.com/photo-1771931169282-4ebc82b973b3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjBwcmVzZW50YXRpb24lMjBzbGlkZSUyMGRlc2lnbnxlbnwwfHx8fDE3ODI1MTE4OTJ8MA&ixlib=rb-4.1.0&q=85",
+        "category": "Saved Presentation 1 Thumbnail"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1781444549700-31d8ec935e58?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzl8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjBwcmVzZW50YXRpb24lMjBzbGlkZSUyMGRlc2lnbnxlbnwwfHx8fDE3ODI1MTE4OTJ8MA&ixlib=rb-4.1.0&q=85",
+        "category": "Saved Presentation 2 Thumbnail"
+      }
+    ],
+    "user_avatars": [
+      {
+        "url": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1NDh8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBwb3J0cmFpdCUyMGhlYWRzaG90fGVufDB8fHx8MTc4MjUxMTg5Mnww&ixlib=rb-4.1.0&q=85",
+        "category": "Nav User Avatar"
+      }
+    ]
+  },
+  "testing_and_accessibility": {
+    "data_testid_rules": "All interactive and key informational elements MUST include a data-testid attribute in kebab-case based on their role.",
+    "examples": [
+      "data-testid='auth-submit-button'",
+      "data-testid='upload-pdf-generate-button'",
+      "data-testid='llm-selector-dropdown'",
+      "data-testid='canvas-play-button'",
+      "data-testid='canvas-next-slide'"
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Use pure HTML/Tailwind for the marketing/auth layouts to allow heavy stylistic freedom, use highly customized Shadcn components for complex interactions like LLM selectors.",
+    "Rely heavily on Framer Motion for entrance animations, layout transitions in the bento grid, and slide transitions in the 16:9 canvas.",
+    "Implement the '16:9 Aspect Ratio' strictly on the canvas container using Tailwind's 'aspect-video' class.",
+    "Do NOT use pure #000000 for backgrounds. Stick to the deeply tinted #050508 / #0A0A0E.",
+    "The forms MUST be built natively (custom inputs mapping to Clerk's hooks), do NOT use the pre-built Clerk UI.",
+    "Enforce the 'rounded-xl', 'rounded-2xl', 'rounded-3xl' radii heavily across the UI.",
+    "All JS code. Share guidelines strictly targeting .js files (no TypeScript)."
+  ]
+}
