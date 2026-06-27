@@ -13,7 +13,6 @@ export default function SignUpPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState("form"); // form | verify
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -26,7 +25,7 @@ export default function SignUpPage() {
     setError("");
     setLoading(true);
     try {
-      await signUp.create({ emailAddress: email, password });
+      await signUp.create({ emailAddress: email });
       await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       setStep("verify");
     } catch (err) {
@@ -92,17 +91,6 @@ export default function SignUpPage() {
               data-testid="sign-up-email"
             />
           </Field>
-          <Field label="Password" htmlFor="password">
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              required
-              data-testid="sign-up-password"
-            />
-          </Field>
 
           {error && (
             <div className="flex items-start gap-2 text-sm text-rose-300 bg-rose-500/10 border border-rose-500/20 rounded-xl px-3 py-2.5" data-testid="sign-up-error">
@@ -114,8 +102,12 @@ export default function SignUpPage() {
           <div id="clerk-captcha" />
 
           <Button variant="magic" type="submit" className="w-full" disabled={loading} data-testid="sign-up-submit">
-            {loading ? <Spinner size={18} /> : "Create account"}
+            {loading ? <Spinner size={18} /> : "Continue with Email"}
           </Button>
+          
+          <p className="text-xs text-center text-zinc-500 mt-4">
+            You can create a passkey in your account settings later.
+          </p>
         </form>
       ) : (
         <form onSubmit={verify} className="space-y-5" data-testid="verify-form">
