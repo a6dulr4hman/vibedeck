@@ -11,8 +11,8 @@ ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL \
     REACT_APP_DEMO_AUTH=$REACT_APP_DEMO_AUTH \
     CI=false
 
-COPY package.json yarn.lock ./
-RUN yarn install --frozen-lockfile
+COPY package.json yarn.lock* ./
+RUN yarn install
 COPY . .
 RUN yarn build
 
