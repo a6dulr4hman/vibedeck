@@ -67,7 +67,7 @@ function Header({ slide, a }) {
 
 function Agenda({ slide, a }) {
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
       <div className="mt-[2.5cqw] flex flex-col" style={{ gap: "1.4cqw" }}>
         {slide.items.map((it, i) => (
@@ -86,15 +86,15 @@ function Agenda({ slide, a }) {
 
 function Bullets({ slide, a }) {
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
-      <div className="mt-[3cqw] grid grid-cols-2 gap-x-[3.5cqw] gap-y-[2.4cqw]">
+      <div className="mt-[2.2cqw] grid grid-cols-2 gap-x-[3cqw] gap-y-[1.8cqw]">
         {slide.items.map((it, i) => (
           <motion.div variants={item} key={i} className="flex items-start gap-[1.6cqw]">
             <IconChip a={a} name={it.icon} />
             <div className="min-w-0">
               <div className="s-h3 font-semibold s-fg clamp-2">{it.title}</div>
-              {it.text && <div className="s-body s-fg-3 mt-[0.6cqw] clamp-3">{it.text}</div>}
+              {it.text && <div className="s-body s-fg-3 mt-[0.6cqw] clamp-2">{it.text}</div>}
             </div>
           </motion.div>
         ))}
@@ -106,11 +106,11 @@ function Bullets({ slide, a }) {
 function Metrics({ slide, a }) {
   const cols = Math.min(slide.metrics.length || 1, 4);
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
-      <div className="mt-[3cqw] grid gap-[2.4cqw]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      <div className="mt-[2.2cqw] grid gap-[1.8cqw]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {slide.metrics.map((m, i) => (
-          <motion.div variants={item} key={i} className="rounded-3xl s-surface p-[2cqw] flex flex-col justify-center" style={{ borderColor: `${a.hex}33` }}>
+          <motion.div variants={item} key={i} className="rounded-3xl s-surface p-[1.6cqw] flex flex-col justify-center" style={{ borderColor: `${a.hex}33` }}>
             <div className="font-display font-light s-metric"><AccentText a={a}><NumberTicker value={m.value} prefix={m.prefix} suffix={m.suffix} /></AccentText></div>
             <div className="s-body s-fg-3 mt-[0.8cqw] clamp-2">{m.label}</div>
           </motion.div>
@@ -124,14 +124,14 @@ function FeatureGrid({ slide, a }) {
   const n = slide.items.length || 1;
   const cols = n <= 2 ? 2 : 3;
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
       <div className="mt-[3cqw] grid gap-[2cqw]" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
         {slide.items.map((it, i) => (
-          <motion.div variants={item} key={i} className="rounded-3xl s-surface p-[2cqw] flex flex-col gap-[1.2cqw]" style={{ borderColor: `${a.hex}26` }}>
+          <motion.div variants={item} key={i} className="rounded-3xl s-surface p-[1.6cqw] flex flex-col gap-[1.2cqw]" style={{ borderColor: `${a.hex}26` }}>
             <IconChip a={a} name={it.icon} />
             <div className="s-h3 font-semibold s-fg clamp-2">{it.title}</div>
-            {it.text && <div className="s-body s-fg-3 clamp-3">{it.text}</div>}
+            {it.text && <div className="s-body s-fg-3 clamp-2">{it.text}</div>}
           </motion.div>
         ))}
       </div>
@@ -141,11 +141,11 @@ function FeatureGrid({ slide, a }) {
 
 function Showcase({ slide, a }) {
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
-      <div className="mt-[3cqw] grid grid-cols-3 gap-[2cqw]">
+      <div className="mt-[2.2cqw] grid grid-cols-3 gap-[1.6cqw]">
         {slide.items.slice(0, 3).map((it, i) => (
-          <motion.div variants={item} key={i} className="relative rounded-3xl p-[2cqw] flex flex-col gap-[1cqw] overflow-hidden" style={{ border: `1px solid ${a.hex}40`, background: `linear-gradient(160deg, ${a.soft}, var(--s-surface))` }}>
+          <motion.div variants={item} key={i} className="relative rounded-3xl p-[1.6cqw] flex flex-col gap-[1cqw] overflow-hidden" style={{ border: `1px solid ${a.hex}40`, background: `linear-gradient(160deg, ${a.soft}, var(--s-surface))` }}>
             <IconChip a={a} name={it.icon} large />
             <div className="s-h3 font-semibold s-fg clamp-2">{it.title}</div>
             {it.text && <div className="s-body s-fg-3 clamp-3">{it.text}</div>}
@@ -159,15 +159,15 @@ function Showcase({ slide, a }) {
 function Bento({ slide, a }) {
   const items = slide.items.slice(0, 4);
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
-      <div className="mt-[2.5cqw] grid gap-[1.6cqw]" style={{ gridTemplateColumns: "repeat(3, 1fr)", gridAutoRows: "1fr", maxHeight: "50cqh" }}>
+      <div className="mt-[2.5cqw] grid gap-[1.4cqw]" style={{ gridTemplateColumns: "repeat(3, 1fr)", gridAutoRows: "1fr", maxHeight: "50cqh" }}>
         {items.map((it, i) => (
-          <motion.div variants={item} key={i} className={`rounded-3xl s-surface p-[1.8cqw] flex flex-col justify-between overflow-hidden ${i === 0 ? "col-span-2 row-span-2" : ""}`} style={{ borderColor: `${a.hex}26`, background: i === 0 ? a.soft : undefined }}>
+          <motion.div variants={item} key={i} className={`rounded-3xl s-surface p-[1.5cqw] flex flex-col justify-between overflow-hidden ${i === 0 ? "col-span-2 row-span-2" : ""}`} style={{ borderColor: `${a.hex}26`, background: i === 0 ? a.soft : undefined }}>
             <IconChip a={a} name={it.icon} large={i === 0} />
             <div>
               <div className={`${i === 0 ? "s-h2" : "s-h3"} font-semibold s-fg clamp-2`}>{it.title}</div>
-              {it.text && <div className="s-body s-fg-3 mt-[0.6cqw] clamp-3">{it.text}</div>}
+              {it.text && <div className="s-body s-fg-3 mt-[0.6cqw] clamp-2">{it.text}</div>}
             </div>
           </motion.div>
         ))}
@@ -178,7 +178,7 @@ function Bento({ slide, a }) {
 
 function Timeline({ slide, a }) {
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
       <div className="mt-[4cqw] relative">
         <div className="absolute top-[0.8cqw] left-0 right-0" style={{ height: "0.25cqw", background: `linear-gradient(90deg, ${a.from}, transparent)` }} />
@@ -217,7 +217,7 @@ function Quote({ slide, a }) {
 function Comparison({ slide, a }) {
   const c = slide.comparison || { leftTitle: "Before", rightTitle: "After", leftItems: [], rightItems: [] };
   const Col = ({ title, items, highlight }) => (
-    <motion.div variants={item} className="rounded-3xl s-surface p-[2.2cqw] flex flex-col overflow-hidden" style={highlight ? { background: a.soft, borderColor: `${a.hex}55` } : undefined}>
+    <motion.div variants={item} className="rounded-3xl s-surface p-[1.8cqw] flex flex-col overflow-hidden" style={highlight ? { background: a.soft, borderColor: `${a.hex}55` } : undefined}>
       <div className="s-h3 font-semibold mb-[1.6cqw]" style={{ color: highlight ? a.hex : "var(--s-fg)" }}>{title}</div>
       <div className="flex flex-col gap-[1.1cqw]">
         {items.map((x, i) => (
@@ -230,7 +230,7 @@ function Comparison({ slide, a }) {
     </motion.div>
   );
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady">
+    <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 h-full w-full flex flex-col justify-center s-padx s-pady overflow-hidden">
       <Header slide={slide} a={a} />
       <div className="mt-[2.5cqw] grid grid-cols-2 gap-[2cqw]">
         <Col title={c.leftTitle} items={c.leftItems} highlight={false} />
