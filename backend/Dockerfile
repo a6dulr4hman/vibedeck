@@ -7,10 +7,12 @@ ENV PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential autoconf libtool pkg-config \
+    && apt-get install -y --no-install-recommends build-essential autoconf automake libtool pkg-config python3-dev libffi-dev \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
+# Upgrade pip to avoid wheel issues
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # emergentintegrations ships on a private index.
 RUN pip install --no-cache-dir -r requirements.txt \
     --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
