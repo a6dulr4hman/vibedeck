@@ -14,8 +14,7 @@ COPY requirements.txt .
 # Upgrade pip to avoid wheel issues
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 # emergentintegrations ships on a private index.
-RUN pip install --no-cache-dir -r requirements.txt \
-    --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
+RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/ > /tmp/pip.log 2>&1 || (cat /tmp/pip.log && exit 1)
 
 COPY . .
 
