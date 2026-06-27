@@ -32,13 +32,13 @@ services:
       - backend
 
   # ---- Optional: run MongoDB here instead of Coolify ----
-  # mongo:
-  #   image: mongo:7
-  #   restart: unless-stopped
-  #   volumes:
-  #     - vibedeck_mongo:/data/db
-  #   ports:
-  #     - "27017:27017"
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - vibedeck_mongo:/data/db
+    ports:
+      - "27017:27017"
 
-# volumes:
-#   vibedeck_mongo:
+volumes:
+  vibedeck_mongo:
