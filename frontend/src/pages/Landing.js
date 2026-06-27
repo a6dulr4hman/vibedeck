@@ -32,10 +32,10 @@ export default function Landing() {
     if (!raw) return;
     localStorage.removeItem(PENDING_KEY);
     try {
-      const { topic, model } = JSON.parse(raw);
+      const { topic, model, theme } = JSON.parse(raw);
       if (topic && topic.trim().length >= 4) {
         setContinuing(true);
-        startScratch(topic, model).then((id) => navigate(`/p/${id}`)).catch(() => setContinuing(false));
+        startScratch(topic, model, theme).then((id) => navigate(`/p/${id}`)).catch(() => setContinuing(false));
       }
     } catch (e) { /* ignore */ }
     // eslint-disable-next-line react-hooks/exhaustive-deps

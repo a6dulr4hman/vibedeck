@@ -7,6 +7,7 @@ export const ACCENTS = {
   amber: { hex: "#F59E0B", soft: "rgba(245,158,11,0.18)", from: "#FBBF24", to: "#F59E0B" },
   rose: { hex: "#FB7185", soft: "rgba(251,113,133,0.18)", from: "#FB7185", to: "#F43F5E" },
   blue: { hex: "#3B82F6", soft: "rgba(59,130,246,0.18)", from: "#60A5FA", to: "#3B82F6" },
+  slate: { hex: "#64748B", soft: "rgba(100,116,139,0.18)", from: "#94A3B8", to: "#475569" },
 };
 
 export function accent(name) {

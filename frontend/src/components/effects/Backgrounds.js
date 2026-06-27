@@ -33,7 +33,7 @@ export function Meteors({ count = 14 }) {
 }
 
 /* ---------------- Sparkles / starfield ---------------- */
-export function Sparkles({ count = 36 }) {
+export function Sparkles({ count = 36, color }) {
   const stars = useMemo(() => Array.from({ length: count }).map(() => ({
     top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
     size: `${Math.random() * 2 + 1}px`, delay: `${(Math.random() * 3).toFixed(2)}s`,
@@ -42,8 +42,8 @@ export function Sparkles({ count = 36 }) {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {stars.map((s, i) => (
-        <span key={i} className="absolute rounded-full bg-white"
-          style={{ top: s.top, left: s.left, width: s.size, height: s.size, animation: `twinkle ${s.dur} ease-in-out ${s.delay} infinite` }} />
+        <span key={i} className="absolute rounded-full"
+          style={{ top: s.top, left: s.left, width: s.size, height: s.size, background: color || "currentColor", animation: `twinkle ${s.dur} ease-in-out ${s.delay} infinite` }} />
       ))}
     </div>
   );
@@ -109,7 +109,7 @@ export function Warp({ accent = "violet" }) {
     <div className="absolute inset-0 overflow-hidden" style={{ perspective: "320px" }}>
       <div className="absolute left-1/2 top-1/2 h-[180%] w-[200%] -translate-x-1/2 retro-grid"
         style={{ transform: "translate(-50%,-30%) rotateX(62deg)", transformOrigin: "center" }} />
-      <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, transparent 30%, #07070b 75%)` }} />
+      <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at center, transparent 30%, var(--s-bg) 75%)` }} />
       <div className="absolute -top-[10%] left-1/2 h-[50%] w-[60%] -translate-x-1/2 blur-[80px] opacity-40"
         style={{ background: `radial-gradient(ellipse at top, ${a.hex}, transparent 60%)` }} />
     </div>
@@ -130,7 +130,7 @@ export function DotBg({ accent }) {
 /* ---------------- dispatcher ---------------- */
 export function SlideBackground({ type, accent }) {
   switch (type) {
-    case "particles": return (<><div className="absolute inset-0" style={{ background: "#07070b" }} /><Particles accent={accent} /><Aurora accent={accent} className="opacity-25" /></>);
+    case "particles": return (<><div className="absolute inset-0" style={{ background: "var(--s-bg)" }} /><Particles accent={accent} /><Aurora accent={accent} className="opacity-25" /></>);
     case "meteors": return (<><Aurora accent={accent} className="opacity-70" /><Meteors count={14} /></>);
     case "retro-grid": return <Warp accent={accent} />;
     case "warp": return <Warp accent={accent} />;

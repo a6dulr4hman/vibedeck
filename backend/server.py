@@ -127,14 +127,14 @@ async def log_usage(user_rec, pres, model, mode, tokens, duration_ms, status):
 
 
 # ---------------------------------------------------------------- pipeline task
-async def run_generation(pres_id, user_rec, source_text, model, mode):
+async def run_generation(pres_id, user_rec, source_text, model, mode, theme=None):
     started = time.time()
 
     async def on_progress(step, label):
         await presentations.update_one({"id": pres_id}, {"$set": {"progress": {"step": step, "label": label}}})
 
     try:
-        deck, tokens = await pipeline.generate_deck(source_text, model, mode=mode, on_progress=on_progress)
+        deck, tokens = await pipeline.generate_deck(source_text, model, mode=mode, on_progress=on_progress, theme=theme)
         await presentations.update_one(
             {"id": pres_id},
             {"$set": {
@@ -145,8 +145,9 @@ async def run_generation(pres_id, user_rec, source_text, model, mode):
         )
         await log_usage(user_rec, pres_id, model, mode, tokens, (time.time() - started) * 1000, "ready")
     except Exception as exc:
+        msg = (str(exc) or f"{type(exc).__name__}").strip() or "Generation failed"
         await presentations.update_one(
-            {"id": pres_id}, {"$set": {"status": "failed", "error": str(exc)[:500], "updatedAt": now_iso()}},
+            {"id": pres_id}, {"$set": {"status": "failed", "error": msg[:500], "updatedAt": now_iso()}},
         )
         await log_usage(user_rec, pres_id, model, mode, 0, (time.time() - started) * 1000, "failed")
 
@@ -201,6 +202,9 @@ async def list_presentations(user=Depends(get_current_user)):
 async def generate_from_pdf(
     file: UploadFile = File(...),
     model: str = Form(llm_router.DEFAULT_MODEL),
+    tone: str = Form("formal"),
+    palette: str = Form("violet"),
+    slideMode: str = Form("dark"),
     user=Depends(get_current_user),
 ):
     rec = await get_user_record(user)
@@ -213,18 +217,20 @@ async def generate_from_pdf(
     if len(text) < 40:
         raise HTTPException(status_code=400, detail="Could not extract readable text from this PDF")
     model = _check_model_access(model, rec.get("tier", "free"))
+    theme = {"tone": tone, "palette": palette, "mode": slideMode}
 
     pres_id = new_id()
     doc = _new_presentation(pres_id, user["sub"], file.filename.rsplit(".", 1)[0][:80] or "Untitled Deck",
-                            model, "pdf", text, file.filename)
+                            model, "pdf", text, file.filename, theme)
     await presentations.insert_one(doc)
-    asyncio.create_task(run_generation(pres_id, rec, text, model, "pdf"))
+    asyncio.create_task(run_generation(pres_id, rec, text, model, "pdf", theme))
     return {"id": pres_id, "status": "processing"}
 
 
 class ScratchBody(BaseModel):
     topic: str
     model: str = llm_router.DEFAULT_MODEL
+    theme: dict | None = None
 
 
 @api.post("/presentations/scratch")
@@ -236,17 +242,18 @@ async def generate_from_scratch(body: ScratchBody, user=Depends(get_current_user
     model = _check_model_access(body.model, rec.get("tier", "free"))
 
     pres_id = new_id()
-    doc = _new_presentation(pres_id, user["sub"], topic[:80], model, "scratch", topic, None)
+    doc = _new_presentation(pres_id, user["sub"], topic[:80], model, "scratch", topic, None, body.theme)
     await presentations.insert_one(doc)
-    asyncio.create_task(run_generation(pres_id, rec, topic, model, "scratch"))
+    asyncio.create_task(run_generation(pres_id, rec, topic, model, "scratch", body.theme))
     return {"id": pres_id, "status": "processing"}
 
 
-def _new_presentation(pres_id, user_sub, title, model, source_type, source_text, file_name):
+def _new_presentation(pres_id, user_sub, title, model, source_type, source_text, file_name, theme=None):
     return {
         "id": pres_id, "userId": user_sub, "title": title, "subtitle": "",
         "status": "processing", "model": model, "sourceType": source_type,
-        "sourceFileName": file_name, "sourceText": source_text, "theme": "dark",
+        "sourceFileName": file_name, "sourceText": source_text,
+        "theme": pipeline._norm_theme(theme),
         "arc": [], "slides": [], "messages": [], "isPublic": False, "shareId": None, "tokens": 0,
         "progress": {"step": 1, "label": "Reading source material"},
         "error": None, "createdAt": now_iso(), "updatedAt": now_iso(),
@@ -318,6 +325,47 @@ async def edit_presentation(pres_id: str, body: EditBody, user=Depends(get_curre
     return public_view(doc)
 
 
+class SlideEditBody(BaseModel):
+    instruction: str
+    model: str | None = None
+
+
+@api.post("/presentations/{pres_id}/slides/{index}/edit")
+async def edit_single_slide(pres_id: str, index: int, body: SlideEditBody, user=Depends(get_current_user)):
+    rec = await get_user_record(user)
+    doc = await presentations.find_one({"id": pres_id, "userId": user["sub"]})
+    if not doc:
+        raise HTTPException(status_code=404, detail="Presentation not found")
+    slides = doc.get("slides") or []
+    if index < 0 or index >= len(slides):
+        raise HTTPException(status_code=400, detail="Slide index out of range")
+    instruction = (body.instruction or "").strip()
+    if not instruction:
+        raise HTTPException(status_code=400, detail="Instruction is required")
+    model = body.model if (body.model in llm_router.MODELS) else doc.get("model", llm_router.DEFAULT_MODEL)
+    model = _check_model_access(model, rec.get("tier", "free"))
+
+    deck_ctx = f"title='{doc.get('title')}' arc={doc.get('arc')}"
+    started = time.time()
+    try:
+        updated, tokens = await pipeline.edit_slide(slides[index], deck_ctx, instruction, model, theme=doc.get("theme"))
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Edit failed: {exc}")
+
+    slides[index] = updated
+    messages = (doc.get("messages") or []) + [
+        {"role": "user", "content": instruction, "slide": index + 1, "createdAt": now_iso()},
+        {"role": "assistant", "content": f"Updated slide {index + 1}.", "slide": index + 1, "createdAt": now_iso()},
+    ]
+    await presentations.update_one(
+        {"id": pres_id},
+        {"$set": {"slides": slides, "messages": messages[-60:], "updatedAt": now_iso()}},
+    )
+    await log_usage(rec, pres_id, model, "slide-edit", tokens, (time.time() - started) * 1000, "ready")
+    doc = await presentations.find_one({"id": pres_id})
+    return public_view(doc)
+
+
 @api.post("/presentations/{pres_id}/share")
 async def toggle_share(pres_id: str, user=Depends(get_current_user)):
     doc = await presentations.find_one({"id": pres_id, "userId": user["sub"]})
@@ -337,6 +385,7 @@ async def public_presentation(share_id: str):
     return {
         "id": doc.get("id"), "title": doc.get("title"), "subtitle": doc.get("subtitle"),
         "arc": doc.get("arc"), "slides": doc.get("slides"), "status": doc.get("status"),
+        "theme": doc.get("theme"),
     }
 
 

@@ -29,7 +29,7 @@ export default function DemoAuthPage({ mode = "signin" }) {
         </span>
       }
     >
-      <div className="mb-5 flex items-start gap-2 text-sm text-amber-200 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5" data-testid="demo-banner">
+      <div className="mb-5 flex items-start gap-2 text-sm text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-xl px-3 py-2.5" data-testid="demo-banner">
         <Icon name="Info" className="h-4 w-4 mt-0.5 shrink-0" />
         <span>This sandbox uses demo auth. Your live Clerk sign-in/up runs on falak.me.</span>
       </div>

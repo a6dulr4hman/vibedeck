@@ -22,6 +22,47 @@ BACKGROUNDS = ["particles", "meteors", "aurora", "retro-grid", "dot-pattern", "g
 ACCENTS = ["violet", "cyan", "fuchsia", "emerald", "amber", "rose", "blue"]
 EFFECTS = ["border-beam", "shine-border", "orbiting-circles", "sparkles-text", "marquee", "animated-grid", "globe"]
 
+# ---- theme system: color palettes + tone guidance ----
+PALETTES = {
+    "violet": ["violet", "fuchsia", "blue"],
+    "ocean": ["cyan", "blue", "emerald"],
+    "sunset": ["amber", "rose", "fuchsia"],
+    "forest": ["emerald", "cyan", "amber"],
+    "mono": ["slate", "blue", "slate"],
+}
+TONE_GUIDE = {
+    "formal": "Tone: formal, precise and executive. Authoritative, concise, no slang.",
+    "playful": "Tone: playful, energetic and friendly. Punchy fun language and vivid verbs.",
+    "bold": "Tone: bold and punchy. Confident claims, high-contrast statements, momentum.",
+    "minimal": "Tone: minimal and restrained. Very few words, lots of breathing room.",
+    "elegant": "Tone: elegant and sophisticated. Refined, warm, premium feel.",
+}
+DEFAULT_THEME = {"mode": "dark", "palette": "violet", "tone": "formal"}
+
+
+def _norm_theme(theme):
+    t = dict(DEFAULT_THEME)
+    if isinstance(theme, dict):
+        if theme.get("mode") in ("light", "dark"):
+            t["mode"] = theme["mode"]
+        if theme.get("palette") in PALETTES:
+            t["palette"] = theme["palette"]
+        if theme.get("tone") in TONE_GUIDE:
+            t["tone"] = theme["tone"]
+    return t
+
+
+def _style_directive(theme):
+    t = _norm_theme(theme)
+    return f"STYLE DIRECTION — {TONE_GUIDE[t['tone']]}"
+
+
+def _apply_palette(slides, palette):
+    accents = PALETTES.get(palette, PALETTES["violet"])
+    for i, s in enumerate(slides):
+        s["accent"] = accents[i % len(accents)]
+    return slides
+
 # ---- component guidance shown to the Director (real MagicUI/Aceternity vocab) ----
 _COMPONENTS = (
     "Backgrounds (MagicUI/Aceternity): particles, meteors, aurora, retro-grid, dot-pattern, grid, ripple, warp, plain. "
@@ -203,9 +244,12 @@ def _fallback_outline(source_text, mode):
     }
 
 
-async def _generate_outline(source_text, model_key, mode):
-    user = _src(source_text, mode) + _TAIL
-    raw, tokens = await llm_router.complete(model_key, OUTLINE_SYSTEM, user)
+async def _generate_outline(source_text, model_key, mode, theme=None):
+    user = _src(source_text, mode) + "\n\n" + _style_directive(theme) + _TAIL
+    try:
+        raw, tokens = await llm_router.complete(model_key, OUTLINE_SYSTEM, user)
+    except Exception:
+        return _fallback_outline(source_text, mode), 0
     try:
         outline = _extract_json(raw, prefer_keys=["slides"])
         if not outline.get("slides"):
@@ -216,10 +260,10 @@ async def _generate_outline(source_text, model_key, mode):
     return outline, tokens
 
 
-async def _generate_slide(deck_ctx, stub, index, model_key):
+async def _generate_slide(deck_ctx, stub, index, model_key, theme=None):
     brief = stub.get("brief", "")
     user = (
-        f"DECK: {deck_ctx}\n\nDESIGN SLIDE {index + 1}.\n"
+        f"DECK: {deck_ctx}\n{_style_directive(theme)}\n\nDESIGN SLIDE {index + 1}.\n"
         f"layout={stub.get('layout')} background={stub.get('background')} accent={stub.get('accent')}.\n"
         f"Slide brief: {brief}" + _TAIL
     )
@@ -231,11 +275,12 @@ async def _generate_slide(deck_ctx, stub, index, model_key):
     return index, _clean_slide(stub, content, index), tokens
 
 
-async def generate_deck(source_text, model_key, mode="pdf", on_progress=None):
+async def generate_deck(source_text, model_key, mode="pdf", on_progress=None, theme=None):
+    theme = _norm_theme(theme)
     total_tokens = 0
     if on_progress:
         await on_progress(2, "Choreographing the narrative arc")
-    outline, otok = await _generate_outline(source_text, model_key, mode)
+    outline, otok = await _generate_outline(source_text, model_key, mode, theme)
     total_tokens += otok
 
     stubs = outline.get("slides", [])[:10]
@@ -247,7 +292,7 @@ async def generate_deck(source_text, model_key, mode="pdf", on_progress=None):
 
     async def run(i, stub):
         nonlocal done, total_tokens
-        idx, slide, tk = await _generate_slide(deck_ctx, stub, i, model_key)
+        idx, slide, tk = await _generate_slide(deck_ctx, stub, i, model_key, theme)
         total_tokens += tk
         done += 1
         if on_progress:
@@ -256,6 +301,7 @@ async def generate_deck(source_text, model_key, mode="pdf", on_progress=None):
 
     gathered = await asyncio.gather(*[run(i, s) for i, s in enumerate(stubs)])
     results = [s for _, s in sorted(gathered, key=lambda x: x[0])]
+    _apply_palette(results, theme["palette"])
 
     if on_progress:
         await on_progress(4, "Applying art direction")
@@ -266,7 +312,7 @@ async def generate_deck(source_text, model_key, mode="pdf", on_progress=None):
     deck = {
         "title": (outline.get("title") or "Untitled Deck")[:80],
         "subtitle": (outline.get("subtitle") or "")[:160],
-        "theme": "dark",
+        "theme": theme,
         "arc": [str(a)[:24] for a in arc][:6],
         "slides": results,
     }
@@ -285,6 +331,7 @@ Keep slides unless told to remove them. Use short lowercase keywords for icons. 
 
 
 async def edit_deck(current_deck, instruction, model_key):
+    theme = _norm_theme(current_deck.get("theme"))
     payload = {
         "title": current_deck.get("title"), "subtitle": current_deck.get("subtitle"),
         "arc": current_deck.get("arc"), "slides": current_deck.get("slides"),
@@ -300,12 +347,47 @@ async def edit_deck(current_deck, instruction, model_key):
             slides.append(_clean_slide(stub, s, i))
     if not slides:
         raise ValueError("Edit produced no slides")
+    _apply_palette(slides, theme["palette"])
     arc = deck.get("arc") if isinstance(deck.get("arc"), list) else current_deck.get("arc", [])
     out = {
         "title": (deck.get("title") or current_deck.get("title") or "Deck")[:80],
         "subtitle": (deck.get("subtitle") or "")[:160],
-        "theme": "dark",
+        "theme": theme,
         "arc": [str(a)[:24] for a in arc][:6],
         "slides": slides,
     }
     return out, tokens
+
+
+# ----------------------------- edit a single slide -----------------------------
+EDIT_SLIDE_SYSTEM = SLIDE_SYSTEM + (
+    "\n\nYou are EDITING ONE existing slide. Apply ONLY the user's instruction and preserve "
+    "everything they did not ask to change. Keep the same layout unless explicitly asked. "
+    "Return the COMPLETE updated slide as ONE JSON object."
+)
+
+
+async def edit_slide(current_slide, deck_ctx, instruction, model_key, theme=None):
+    try:
+        idx = int(str(current_slide.get("id", "slide-1")).split("-")[-1]) - 1
+    except Exception:
+        idx = 0
+    user = (
+        f"DECK: {deck_ctx}\n{_style_directive(theme)}\n\n"
+        f"CURRENT SLIDE JSON:\n{json.dumps(current_slide)[:8000]}\n\n"
+        f"INSTRUCTION: {instruction}\n\nReturn the FULL updated slide JSON now."
+    ) + _TAIL
+    raw, tokens = await llm_router.complete(model_key, EDIT_SLIDE_SYSTEM, user, max_tokens=4000)
+    content = _extract_json(raw, prefer_keys=["title", "items", "metrics", "quote"])
+    stub = {
+        "layout": content.get("layout") or current_slide.get("layout"),
+        "background": content.get("background") or current_slide.get("background"),
+        "accent": content.get("accent") or current_slide.get("accent"),
+        "effects": content.get("effects") or current_slide.get("effects"),
+        "brief": content.get("title") or current_slide.get("title"),
+    }
+    slide = _clean_slide(stub, content, idx)
+    slide["id"] = current_slide.get("id") or slide["id"]
+    # keep the slide on-palette: preserve its prior accent
+    slide["accent"] = current_slide.get("accent") or slide["accent"]
+    return slide, tokens

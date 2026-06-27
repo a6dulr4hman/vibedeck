@@ -1,75 +1,210 @@
-# VibeDeck — The Autonomous Presentation Director
+# VibeDeck
 
-VibeDeck ingests a PDF (or a typed brief) and uses a multi-LLM **Director** to
-generate a punchy, animated, **strict 16:9** dark-mode slide deck — then plays it
-back in a cinematic viewer. You can also edit any deck in plain English.
-
-## Stack
-- **Backend:** FastAPI + MongoDB (Motor)
-- **Frontend:** React (CRA) + Tailwind + framer-motion + lucide-react
-- **Auth:** Custom Clerk forms (no hosted Clerk UI)
-- **Director LLMs:** K2 Think v2 (default) · Gemini 3.1 Pro · Claude Sonnet 4.6 · DeepSeek V4 Pro · Nemotron 3 Ultra
-
-## How generation works
-1. Extract text from the PDF / read the brief.
-2. The Director LLM defines a narrative arc (Hook → Problem → Solution → Proof → Conclusion)
-   and emits a **structured slide JSON** (layout + background + accent + content + icon keywords).
-3. Icon keywords are resolved to lucide icons (phase-2 resolution).
-4. The React renderer paints each slide as an animated 16:9 canvas (aurora, meteors,
-   sparkles, number tickers, bento, timelines, etc.). Each slide keeps an `id` + speaker
-   `notes` so the upcoming audio-choreography engine can sync animations to narration.
+**VibeDeck** is an autonomous AI presentation **director & choreographer**. Give it a topic
+or drop a PDF and it generates a dynamic, animated, strictly-16:9 web presentation — choosing
+layouts, color palettes, backgrounds and motion the way an art director would. A multi-LLM
+router lets you pick the "Director" model, and a split-screen editor lets you refine any slide
+by chatting with the AI.
 
 ---
 
-## Local development
-- Backend: `uvicorn server:app --reload --port 8001` (env in `backend/.env`)
-- Frontend: `yarn start` (env in `frontend/.env`)
+## 1. Stack
 
-## Deploying on Coolify (Docker)
+| Layer | Tech |
+|-------|------|
+| Frontend | React (CRA), React Router, Tailwind CSS, Framer Motion, lucide-react |
+| Backend | FastAPI (async), Motor (async MongoDB driver), pypdf |
+| Database | MongoDB |
+| LLMs | K2 Think v2, MiniMax M3, DeepSeek V4 Pro (NVIDIA), Gemini, Claude, GPT (Emergent universal key) |
+| Auth | Custom Clerk (production) + gated demo mode (preview/sandbox) |
+| Deploy | Docker + docker-compose + nginx (Coolify) |
 
-This repo is fully dockerized. Host MongoDB on Coolify (or anywhere reachable) and
-deploy the two services.
+All animated slide visuals are built from real MagicUI / Aceternity-style primitives
+(Aurora, Meteors, Particles, Ripple, Warp grid, Border-Beam, Orbiting-Circles, Globe,
+Marquee, Sparkles, animated Number-Tickers).
 
-### 1. MongoDB
-Create a MongoDB resource in Coolify. Note its internal connection string, e.g.
-`mongodb://<user>:<pass>@<service>:27017`.
+---
 
-### 2. Backend service (`./backend/Dockerfile`)
-Set these environment variables (see `backend/.env.example`):
-- `MONGO_URL`, `DB_NAME`
-- `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`, `CLERK_AUTHORIZED_PARTIES`
-- `K2_API_KEY`, `NVIDIA_API_KEY`, `EMERGENT_LLM_KEY`
-- `ALLOW_TEST_AUTH=false`, `CORS_ORIGINS=https://<your-frontend-domain>`
+## 2. Directory structure
 
-Exposes port **8001**. Give it a public domain, e.g. `https://api.vibedeck.<domain>`.
-
-### 3. Frontend service (`./frontend/Dockerfile`)
-CRA bakes env at **build time**, so set these as **build args** (see `frontend/.env.example`):
-- `REACT_APP_BACKEND_URL=https://api.vibedeck.<domain>`
-- `REACT_APP_CLERK_PUBLISHABLE_KEY=pk_live_...`
-- `REACT_APP_DEMO_AUTH=false`  ← must be false in production (enables real Clerk)
-
-Serves on port **80** via nginx (SPA fallback included).
-
-### 4. Clerk
-In the Clerk dashboard, ensure your production instance allows your frontend domain.
-Email + password sign-up/sign-in with email-code verification must be enabled.
-
-### Or with docker-compose
-```bash
-cp backend/.env.example .env   # fill values; add REACT_APP_* too
-docker compose up --build -d
 ```
-(Uncomment the `mongo` service in `docker-compose.yml` to run Mongo locally.)
+/app
+├── backend/
+│   ├── server.py        # FastAPI app + all /api routes + Mongo access
+│   ├── pipeline.py      # Generation engine: outline → concurrent per-slide → theme/palette/tone
+│   ├── llm_router.py    # Multi-LLM router, model registry, tiers, token metering
+│   ├── icons.py         # keyword → lucide icon resolver (two-phase icon system)
+│   ├── auth.py          # Clerk session verification + gated X-Test-User demo path
+│   ├── Dockerfile
+│   └── .env             # secrets + Mongo + model keys (NOT committed)
+├── frontend/
+│   └── src/
+│       ├── App.js                 # routes
+│       ├── index.js               # providers: Theme → (Clerk|Demo) → Me → Router
+│       ├── index.css              # theme variables (light/dark) + slide canvas + keyframes
+│       ├── lib/
+│       │   ├── api.js             # axios instance; injects auth headers
+│       │   ├── auth.js            # unified auth (Clerk OR demo) via useVibeAuth()
+│       │   ├── useMe.js           # /api/me context: tier + isAdmin
+│       │   ├── useGenerate.js     # startScratch / startPdf helpers
+│       │   ├── theme.js           # global light/dark app chrome toggle
+│       │   ├── constants.js       # TONES, PALETTES, DEFAULT_DECK_THEME
+│       │   └── accents.js         # accent color palette (hex/soft/gradient)
+│       ├── components/
+│       │   ├── Navbar.js          # logo, pricing, theme toggle, account menu, admin link
+│       │   ├── HeroPrompt.js      # home input → DeckSetupModal → generate
+│       │   ├── DeckSetupModal.js  # wizard: tone + palette + light/dark
+│       │   ├── ThemePicker.js     # reusable tone/palette/mode picker
+│       │   ├── ModelSelector.js   # tiered, collapsible model dropdown (locks higher tiers)
+│       │   ├── SlideRenderer.js   # 12 animated layouts; theme-aware (light/dark slides)
+│       │   ├── NumberTicker.js    # animated count-up for metrics
+│       │   ├── GenerationOverlay.js
+│       │   ├── effects/Backgrounds.js  # Aurora/Meteors/Particles/Ripple/Warp/Grid/Dot
+│       │   ├── magic/Effects.js        # Border-Beam/Shine/Orbiting/Globe/Marquee/Sparkles
+│       │   └── ui/                # Button, Input, Spinner
+│       └── pages/
+│           ├── Landing.js   # hero + features
+│           ├── Dashboard.js # studio: new deck (PDF/scratch) + saved deck grid
+│           ├── Editor.js    # SPLIT SCREEN: chat (left) ↔ live slide + controls (right)
+│           ├── Present.js   # public, view-only share player (no auth)
+│           ├── Pricing.js   # Free / Pro / Max tiers + model lists
+│           ├── Admin.js     # users, generations, model/token analytics
+│           └── SignIn/SignUp/DemoAuth.js
+├── docker-compose.yml
+└── README.md
+```
 
 ---
 
-## Preview / demo mode
-Clerk **production** keys are domain-locked to `falak.me`, so they can't run in a
-generic preview sandbox. Setting `REACT_APP_DEMO_AUTH=true` enables a gated demo
-login (backend `ALLOW_TEST_AUTH=true`) so the app can be exercised end-to-end
-without Clerk. **Turn both off in production.**
+## 3. How generation works (pipeline.py)
 
-## Roadmap
-- Audio choreography: Google Cloud TTS (Journey) + STT V2 (Chirp 2, word offsets) + JS timeline sync.
-- Pitch Coach live mode (Web Speech API + K2 reasoning feedback).
+To avoid the Director model's request timeout and reduce hallucination, generation is **two
+phase and concurrent**:
+
+1. **Outline** — one small, fast prompt returns a deck stub: title, narrative `arc`, and a
+   list of slide stubs (each: `layout`, `background`, `accent`, `effects`, one-line `brief`).
+   If the outline call fails, a deterministic fallback outline is used.
+2. **Per-slide (concurrent)** — every slide is generated by **its own prompt**, fired in
+   parallel (capped by a semaphore). Smaller prompts = lower latency, fewer timeouts. Each
+   slide returns compressed JSON (short phrases, ≤3–4 items) so nothing overflows the canvas.
+3. **Art direction** — the chosen **palette** remaps every slide's accent so the whole deck is
+   color-cohesive; the **tone** (formal/playful/bold/minimal/elegant) is injected into every
+   prompt; the **mode** (light/dark) is stored on the deck and used by the renderer.
+
+Icons: the model emits a short keyword (e.g. `security`, `growth`); `icons.py` resolves it to a
+real lucide icon name (no giant icon list in the prompt).
+
+**Slide JSON schema (per slide):** `{ id, layout, background, accent, effects[], eyebrow,
+title, subtitle, items[{icon,title,text}], metrics[{value,prefix,suffix,label}],
+timeline[{label,title,text}], quote{text,author,role}, comparison{...}, notes }`.
+
+Layouts: `cover, statement, agenda, bullets, metrics, feature-grid, showcase, bento, timeline,
+quote, comparison, closing`.
+
+---
+
+## 4. Theme system
+
+- **App chrome theme** — global light/dark toggle in the navbar (persisted in localStorage,
+  toggles a `dark` class on `<html>`). All surfaces are driven by CSS variables.
+- **Deck theme** — chosen per deck in the setup wizard and stored on the presentation:
+  - `tone`: formal · playful · bold · minimal · elegant (shapes the copy)
+  - `palette`: violet · ocean · sunset · forest · mono (drives accent colors)
+  - `mode`: light · dark slides (the slide canvas restyles via `data-mode`)
+
+---
+
+## 5. Editing
+
+- **Per-slide chat (recommended)** — `POST /api/presentations/{id}/slides/{index}/edit` sends
+  ONLY the current slide + your instruction to the Director, which returns that one updated
+  slide. The rest of the deck is untouched. This powers the Editor's left chat panel.
+- **Whole-deck edit** — `POST /api/presentations/{id}/edit` regenerates the entire deck from a
+  single instruction (kept for bulk changes).
+
+---
+
+## 6. Tiers & models (llm_router.py)
+
+| Tier | Models |
+|------|--------|
+| Free | K2 Think v2 (default), MiniMax M3, DeepSeek V4 Pro |
+| Pro  | Gemini 3.5 Flash, Claude Sonnet 4.6, GPT 5.4 |
+| Max  | Gemini 3.1 Pro, Claude Opus 4.8, GPT 5.5 |
+
+Higher tiers inherit lower-tier models. Selecting a locked model routes the user to `/pricing`.
+Providers: `k2` → api.k2think.ai · `nvidia` → integrate.api.nvidia.com (MiniMax, DeepSeek) ·
+`gemini`/`anthropic`/`openai` → Emergent universal key. Every call returns `(text, tokens)`
+so usage is metered per user/model.
+
+---
+
+## 7. API reference (all under `/api`)
+
+| Method | Route | Purpose |
+|--------|-------|---------|
+| GET | `/health` | liveness |
+| GET | `/models` | model registry + tiers (public) |
+| GET | `/me` | current user `{userId,email,tier,isAdmin}` |
+| GET | `/presentations` | list current user's decks (summaries) |
+| POST | `/presentations/generate` | multipart PDF → deck (`model,tone,palette,slideMode`) |
+| POST | `/presentations/scratch` | brief → deck (`{topic,model,theme}`) |
+| GET | `/presentations/{id}` | full deck (owner only) |
+| PUT | `/presentations/{id}` | update title/slides |
+| POST | `/presentations/{id}/edit` | whole-deck AI edit |
+| POST | `/presentations/{id}/slides/{index}/edit` | single-slide AI edit |
+| POST | `/presentations/{id}/share` | toggle public share link |
+| GET | `/public/presentations/{shareId}` | public, view-only deck (no auth) |
+| DELETE | `/presentations/{id}` | delete |
+| GET | `/admin/overview` | totals + usage by model/tier (admin) |
+| GET | `/admin/users` | all users + per-user stats (admin) |
+| POST | `/admin/users/{userId}/tier` | set a user's tier (admin) |
+| GET | `/admin/generations` | recent generation logs (admin) |
+
+---
+
+## 8. Data models
+
+- **users**: `{ clerkUserId, email, tier(free|pro|max), isAdmin, createdAt, updatedAt }`
+- **presentations**: `{ id, userId, title, subtitle, status(processing|ready|failed),
+  model, sourceType(pdf|scratch), theme{mode,palette,tone}, arc[], slides[], messages[],
+  isPublic, shareId, tokens, progress, error, createdAt, updatedAt }`
+- **usage_logs**: `{ id, userId, email, tier, presentationId, model, mode, tokens,
+  durationMs, status, createdAt }`
+
+---
+
+## 9. Environment variables
+
+**backend/.env**: `MONGO_URL`, `DB_NAME`, `CLERK_SECRET_KEY`, `CLERK_PUBLISHABLE_KEY`,
+`CLERK_AUTHORIZED_PARTIES`, `K2_API_KEY`, `K2_BASE_URL`, `NVIDIA_API_KEY`, `NVIDIA_BASE_URL`,
+`EMERGENT_LLM_KEY`, `ALLOW_TEST_AUTH`, `CORS_ORIGINS`, `ADMIN_EMAILS`.
+
+**frontend/.env**: `REACT_APP_BACKEND_URL`, `REACT_APP_CLERK_PUBLISHABLE_KEY`,
+`REACT_APP_DEMO_AUTH`.
+
+---
+
+## 10. Auth modes
+
+- **Production (falak.me)**: real custom Clerk forms. Set `REACT_APP_DEMO_AUTH=false` and
+  `ALLOW_TEST_AUTH=false`. Admins are any email in `ADMIN_EMAILS` (default `admin@falak.me`)
+  and are auto-granted the Max tier.
+- **Preview/sandbox**: Clerk production keys are domain-locked to falak.me, so a **gated demo
+  mode** (`REACT_APP_DEMO_AUTH=true`) lets you sign in with any email and authenticates to the
+  backend via the `X-Test-User` header (`ALLOW_TEST_AUTH=true`). Use `admin@falak.me` to get
+  admin rights in the sandbox.
+
+---
+
+## 11. Local development
+
+```bash
+# backend (managed by supervisor in this environment)
+cd backend && pip install -r requirements.txt
+# frontend
+cd frontend && yarn install && yarn start
+```
+
+Backend runs on `:8001` (routes prefixed `/api`), frontend on `:3000`. In containers, nginx
+serves the built frontend and proxies `/api` to the backend.

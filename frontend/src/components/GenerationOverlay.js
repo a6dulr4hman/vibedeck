@@ -22,8 +22,8 @@ export default function GenerationOverlay({ progress }) {
   const active = serverStep ? Math.min(serverStep - 1, STEPS.length - 1) : tick;
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-ink-900/90 backdrop-blur-xl" data-testid="generation-overlay">
-      <Sparkles count={60} />
+    <div className="fixed inset-0 z-50 grid place-items-center bg-ink-900/95 backdrop-blur-xl text-white" data-testid="generation-overlay">
+      <Sparkles count={60} color="#ffffff" />
       <div className="relative z-10 w-full max-w-lg px-8 text-center">
         <div className="mx-auto mb-8 relative h-24 w-24">
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 blur-2xl opacity-60 animate-pulse" />

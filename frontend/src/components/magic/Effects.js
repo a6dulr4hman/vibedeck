@@ -13,7 +13,7 @@ function BorderBeam({ a }) {
           animation: "beamRotate 5s linear infinite",
         }}
       />
-      <span className="absolute inset-[2px] rounded-[inherit]" style={{ background: "#07070b" }} />
+      <span className="absolute inset-[2px] rounded-[inherit]" style={{ background: "var(--s-bg)" }} />
     </span>
   );
 }
@@ -29,7 +29,7 @@ function ShineBorder({ a }) {
           animation: "beamRotate 9s linear infinite",
         }}
       />
-      <span className="absolute inset-[2px] rounded-[inherit]" style={{ background: "#07070b" }} />
+      <span className="absolute inset-[2px] rounded-[inherit]" style={{ background: "var(--s-bg)" }} />
     </span>
   );
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useVibeAuth, DEMO } from "../lib/auth";
 import { useMe } from "../lib/useMe";
+import { useTheme } from "../lib/theme";
 import Icon from "./Icon";
 import { Button } from "./ui/Button";
 
@@ -11,6 +12,7 @@ const TIER_LABEL = { free: "Free", pro: "Pro", max: "Max" };
 export default function Navbar({ floating = false }) {
   const { isSignedIn, user, signOut } = useVibeAuth();
   const { tier, isAdmin } = useMe();
+  const { mode, toggle } = useTheme();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -40,6 +42,14 @@ export default function Navbar({ floating = false }) {
         </nav>
 
         <div className="flex items-center gap-2.5">
+          <button
+            onClick={toggle}
+            data-testid="theme-toggle"
+            title={mode === "dark" ? "Switch to light" : "Switch to dark"}
+            className="h-10 w-10 rounded-full glass grid place-items-center text-muted hover:text-ink transition-colors"
+          >
+            <Icon name={mode === "dark" ? "Sun" : "Moon"} className="h-5 w-5" />
+          </button>
           {isSignedIn ? (
             <>
               <Button as={Link} to="/dashboard" variant="secondary" className="px-4 py-2 text-sm" data-testid="nav-projects">

@@ -5,6 +5,7 @@ import { ClerkProvider } from "@clerk/clerk-react";
 import App from "./App";
 import { DEMO, DemoAuthProvider } from "./lib/auth";
 import { MeProvider } from "./lib/useMe";
+import { ThemeProvider } from "./lib/theme";
 import "./index.css";
 
 const clerkKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
@@ -26,6 +27,8 @@ const tree = DEMO ? (
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>{tree}</BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>{tree}</BrowserRouter>
+    </ThemeProvider>
   </React.StrictMode>
 );
