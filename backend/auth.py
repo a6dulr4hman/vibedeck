@@ -36,7 +36,8 @@ async def get_current_user(request: Request) -> dict:
     if ALLOW_TEST_AUTH:
         test_user = request.headers.get("X-Test-User")
         if test_user:
-            return {"sub": test_user, "email": f"{test_user}@test.vibedeck", "test": True}
+            test_email = request.headers.get("X-Test-Email") or f"{test_user}@test.vibedeck"
+            return {"sub": test_user, "email": test_email, "test": True}
 
     if _clerk is None:
         raise HTTPException(status_code=500, detail="Authentication is not configured on the server")

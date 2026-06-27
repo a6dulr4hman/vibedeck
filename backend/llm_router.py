@@ -1,11 +1,20 @@
-"""Multi-LLM router for VibeDeck.
+"""Multi-LLM router for VibeDeck (tiered).
 
-Default reasoning "Director" is K2 Think v2 (custom OpenAI-compatible API).
-DeepSeek V4 Pro and NVIDIA Nemotron 3 Ultra are served via build.nvidia.com.
-Gemini 3.1 Pro and Claude Sonnet 4.6 are served via the Emergent universal key.
+Default Director = K2 Think v2. Models are grouped into subscription tiers:
+  free : K2 Think v2, MiniMax M3, DeepSeek V4 Pro
+  pro  : Gemini 3.5 Flash, Claude Sonnet 4.6, GPT 5.4
+  max  : Gemini 3.1 Pro, Claude Opus 4.8, GPT 5.5
+
+Providers:
+  k2      -> api.k2think.ai (custom)
+  nvidia  -> build.nvidia.com (MiniMax M3, DeepSeek V4 Pro)
+  openai/anthropic/gemini -> Emergent universal key (emergentintegrations)
+
+complete() returns (text, tokens_used) so generations can be metered.
 """
 import os
 import asyncio
+import time
 import httpx
 
 K2_API_KEY = os.environ.get("K2_API_KEY")
@@ -15,38 +24,56 @@ NVIDIA_BASE_URL = os.environ.get("NVIDIA_BASE_URL", "https://integrate.api.nvidi
 EMERGENT_LLM_KEY = os.environ.get("EMERGENT_LLM_KEY")
 
 DEFAULT_MODEL = "k2-think-v2"
+TIER_ORDER = {"free": 0, "pro": 1, "max": 2}
 
-# Public registry surfaced to the frontend LLM selector.
 MODELS = {
+    # ---- FREE ----
     "k2-think-v2": {
-        "provider": "k2", "model": "MBZUAI-IFM/K2-Think-v2",
-        "label": "K2 Think v2", "vendor": "MBZUAI-IFM",
-        "accent": "violet", "tagline": "Reasoning Choreographer (default)",
-        "token_budget": 28000,
+        "provider": "k2", "model": "MBZUAI-IFM/K2-Think-v2", "label": "K2 Think v2",
+        "vendor": "MBZUAI-IFM", "accent": "violet", "tier": "free",
+        "tagline": "Reasoning Choreographer", "budget": 16000,
     },
-    "gemini-3.1-pro": {
-        "provider": "gemini", "model": "gemini-3.1-pro-preview",
-        "label": "Gemini 3.1 Pro", "vendor": "Google",
-        "accent": "cyan", "tagline": "Multimodal art direction",
-        "token_budget": 8000,
-    },
-    "claude-sonnet-4.6": {
-        "provider": "anthropic", "model": "claude-sonnet-4-6",
-        "label": "Claude Sonnet 4.6", "vendor": "Anthropic",
-        "accent": "amber", "tagline": "Narrative & copywriting",
-        "token_budget": 8000,
+    "minimax-m3": {
+        "provider": "nvidia", "model": "minimaxai/minimax-m3", "label": "MiniMax M3",
+        "vendor": "MiniMax", "accent": "rose", "tier": "free",
+        "tagline": "Creative & fast", "budget": 8000,
     },
     "deepseek-v4-pro": {
-        "provider": "nvidia", "model": "deepseek-ai/deepseek-v4-pro",
-        "label": "DeepSeek V4 Pro", "vendor": "DeepSeek",
-        "accent": "blue", "tagline": "Fast & structured",
-        "token_budget": 8000,
+        "provider": "nvidia", "model": "deepseek-ai/deepseek-v4-pro", "label": "DeepSeek V4 Pro",
+        "vendor": "DeepSeek", "accent": "blue", "tier": "free",
+        "tagline": "Structured & fast", "budget": 8000,
     },
-    "nemotron-3-ultra": {
-        "provider": "nvidia", "model": "nvidia/nemotron-3-ultra-550b-a55b",
-        "label": "Nemotron 3 Ultra", "vendor": "NVIDIA",
-        "accent": "emerald", "tagline": "Heavyweight synthesis",
-        "token_budget": 14000,
+    # ---- PRO ----
+    "gemini-3.5-flash": {
+        "provider": "gemini", "model": "gemini-3.5-flash", "label": "Gemini 3.5 Flash",
+        "vendor": "Google", "accent": "cyan", "tier": "pro",
+        "tagline": "Snappy multimodal", "budget": 6000,
+    },
+    "claude-sonnet-4.6": {
+        "provider": "anthropic", "model": "claude-sonnet-4-6", "label": "Claude Sonnet 4.6",
+        "vendor": "Anthropic", "accent": "amber", "tier": "pro",
+        "tagline": "Narrative & copy", "budget": 6000,
+    },
+    "gpt-5.4": {
+        "provider": "openai", "model": "gpt-5.4", "label": "GPT 5.4",
+        "vendor": "OpenAI", "accent": "emerald", "tier": "pro",
+        "tagline": "Balanced reasoning", "budget": 6000,
+    },
+    # ---- MAX ----
+    "gemini-3.1-pro": {
+        "provider": "gemini", "model": "gemini-3.1-pro-preview", "label": "Gemini 3.1 Pro",
+        "vendor": "Google", "accent": "cyan", "tier": "max",
+        "tagline": "Top-tier multimodal", "budget": 8000,
+    },
+    "claude-opus-4.8": {
+        "provider": "anthropic", "model": "claude-opus-4-8", "label": "Claude Opus 4.8",
+        "vendor": "Anthropic", "accent": "amber", "tier": "max",
+        "tagline": "Deepest writing", "budget": 8000,
+    },
+    "gpt-5.5": {
+        "provider": "openai", "model": "gpt-5.5", "label": "GPT 5.5",
+        "vendor": "OpenAI", "accent": "emerald", "tier": "max",
+        "tagline": "Frontier reasoning", "budget": 8000,
     },
 }
 
@@ -56,17 +83,27 @@ def list_models():
     for key, cfg in MODELS.items():
         out.append({
             "id": key, "label": cfg["label"], "vendor": cfg["vendor"],
-            "accent": cfg["accent"], "tagline": cfg["tagline"],
+            "accent": cfg["accent"], "tagline": cfg["tagline"], "tier": cfg["tier"],
             "default": key == DEFAULT_MODEL,
         })
     return out
 
 
-_sem = asyncio.Semaphore(8)  # respect K2 concurrency (10) / generic safety
+def model_tier(model_key):
+    return (MODELS.get(model_key) or MODELS[DEFAULT_MODEL])["tier"]
+
+
+def is_model_allowed(model_key, user_tier):
+    cfg = MODELS.get(model_key)
+    if not cfg:
+        return False
+    return TIER_ORDER[cfg["tier"]] <= TIER_ORDER.get(user_tier, 0)
+
+
+_sem = asyncio.Semaphore(8)  # respect K2: 10 concurrent / 30 per min
 
 
 def strip_reasoning(text: str) -> str:
-    """K2 / reasoning models prefix a <think> block. Keep only the answer."""
     if not isinstance(text, str):
         return ""
     if "</think>" in text:
@@ -86,73 +123,61 @@ async def _openai_compatible(base_url, api_key, model, system, user, max_tokens)
         "stream": False,
     }
     async with _sem:
-        async with httpx.AsyncClient(timeout=300) as client:
+        async with httpx.AsyncClient(timeout=115) as client:
             r = await client.post(
                 f"{base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json",
-                    "accept": "application/json",
-                },
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json", "accept": "application/json"},
                 json=payload,
             )
             r.raise_for_status()
             data = r.json()
-    return data["choices"][0]["message"]["content"]
+    content = data["choices"][0]["message"]["content"]
+    tokens = (data.get("usage") or {}).get("total_tokens", 0)
+    return content, tokens
 
 
 async def _k2_complete(model, system, user, max_tokens):
-    # K2 example uses a single user turn; fold the system prompt in for safety.
     merged = f"{system}\n\n---\n\n{user}"
-    payload = {
-        "model": model,
-        "messages": [{"role": "user", "content": merged}],
-        "stream": False,
-        "max_tokens": max_tokens,
-    }
+    payload = {"model": model, "messages": [{"role": "user", "content": merged}], "stream": False, "max_tokens": max_tokens}
     async with _sem:
-        async with httpx.AsyncClient(timeout=420) as client:
+        async with httpx.AsyncClient(timeout=115) as client:
             r = await client.post(
                 f"{K2_BASE_URL}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {K2_API_KEY}",
-                    "Content-Type": "application/json",
-                    "accept": "application/json",
-                },
+                headers={"Authorization": f"Bearer {K2_API_KEY}", "Content-Type": "application/json", "accept": "application/json"},
                 json=payload,
             )
             r.raise_for_status()
             data = r.json()
-    return data["choices"][0]["message"]["content"]
+    content = data["choices"][0]["message"]["content"]
+    tokens = (data.get("usage") or {}).get("total_tokens", 0)
+    return content, tokens
 
 
 async def _emergent_complete(provider, model, system, user, max_tokens):
     import uuid
     from emergentintegrations.llm.chat import LlmChat, UserMessage
-    chat = (
-        LlmChat(api_key=EMERGENT_LLM_KEY, session_id=uuid.uuid4().hex, system_message=system)
-        .with_model(provider, model)
-    )
+    chat = LlmChat(api_key=EMERGENT_LLM_KEY, session_id=uuid.uuid4().hex, system_message=system).with_model(provider, model)
     resp = await chat.send_message(UserMessage(text=user))
-    if isinstance(resp, str):
-        return resp
-    return getattr(resp, "content", str(resp))
+    text = resp if isinstance(resp, str) else getattr(resp, "content", str(resp))
+    tokens = (len(system) + len(user) + len(text)) // 4  # estimate (no usage from lib)
+    return text, tokens
 
 
-async def complete(model_key: str, system: str, user: str, max_tokens: int = 8000) -> str:
+async def complete(model_key: str, system: str, user: str, max_tokens: int = 6000):
+    """Returns (text, tokens_used)."""
     cfg = MODELS.get(model_key) or MODELS[DEFAULT_MODEL]
     provider = cfg["provider"]
     model = cfg["model"]
-    budget = cfg.get("token_budget", max_tokens)
+    budget = cfg.get("budget", max_tokens)
 
     if provider == "k2":
-        raw = await _k2_complete(model, system, user, budget)
-        return strip_reasoning(raw)
+        raw, tokens = await _k2_complete(model, system, user, budget)
+        return strip_reasoning(raw), tokens
     if provider == "nvidia":
-        sys_msg = system + "\n\ndetailed thinking off"
-        raw = await _openai_compatible(NVIDIA_BASE_URL, NVIDIA_API_KEY, model, sys_msg, user, budget)
-        return strip_reasoning(raw)
-    if provider in ("gemini", "anthropic"):
-        return strip_reasoning(await _emergent_complete(provider, model, system, user, budget))
+        raw, tokens = await _openai_compatible(NVIDIA_BASE_URL, NVIDIA_API_KEY, model, system + "\n\ndetailed thinking off", user, budget)
+        return strip_reasoning(raw), tokens
+    if provider in ("gemini", "anthropic", "openai"):
+        raw, tokens = await _emergent_complete(provider, model, system, user, budget)
+        return strip_reasoning(raw), tokens
 
     raise ValueError(f"Unsupported provider for model {model_key}")

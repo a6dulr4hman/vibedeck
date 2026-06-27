@@ -46,7 +46,7 @@ function useDemoAuth() {
     isLoaded: true,
     isSignedIn: !!ctx?.user,
     user: ctx?.user ? { email: ctx.user.email, imageUrl: null } : null,
-    getAuthHeaders: async () => (ctx?.user ? { "X-Test-User": ctx.user.id } : {}),
+    getAuthHeaders: async () => (ctx?.user ? { "X-Test-User": ctx.user.id, "X-Test-Email": ctx.user.email } : {}),
     signOut: ctx?.signOut || (() => {}),
     signInDemo: ctx?.signInDemo || (() => {}),
   };
